@@ -44,11 +44,19 @@ def simplex(table, basis):
         basis[row] = col
 
 
-def canonical(c, A, signs, b):
+def canonical(c, A, signs, b, free_vars):
     A = [row[:] for row in A]
     c = c[:]
     signs = signs[:]
     b = b[:]
+    negative_columns = {}
+
+    for j in sorted(free_vars):
+        negative_columns[j] = len(c)
+        c.append(-c[j])
+
+        for row in A:
+            row.append(-row[j])
 
     for i in range(len(A)):
         if b[i] < 0:
@@ -66,23 +74,19 @@ def canonical(c, A, signs, b):
                 row.append(0)
 
             c.append(0)
+            A[i][-1] = 1 if signs[i] == "<=" else -1
 
-            if signs[i] == "<=":
-                A[i][-1] = 1
-            else:
-                A[i][-1] = -1
-
-    return c, A, b
+    return c, A, b, negative_columns
 
 
-def solve(c, A, signs, b, direction):
+def solve(c, A, signs, b, direction, free_vars=()):
     original_c = c[:]
     n = len(c)
 
     if direction == "max":
         c = [-x for x in c]
 
-    c, A, b = canonical(c, A, signs, b)
+    c, A, b, negative_columns = canonical(c, A, signs, b, free_vars)
 
     canonical_n = len(c)
 
@@ -121,7 +125,7 @@ def solve(c, A, signs, b, direction):
 
     table.append(objective)
 
-    print("\nРешение вспомогательной задачи...")
+    print("\nРешение вспомогательной задачи:")
 
     if not simplex(table, basis):
         print("Решений нет")
@@ -138,13 +142,35 @@ def solve(c, A, signs, b, direction):
         print("Исходная задача не имеет решений")
         return
 
-    for i in range(len(basis)):
-        if basis[i] in artificial:
-            for j in range(canonical_n):
-                if abs(table[i][j]) > EPS:
-                    pivot(table, i, j)
-                    basis[i] = j
-                    break
+    i = 0
+
+    while i < len(basis):
+        if basis[i] not in artificial:
+            i += 1
+            continue
+
+        if abs(table[i][-1]) > EPS:
+            raise ArithmeticError("Искусственная переменная не равна нулю")
+
+        table[i][-1] = 0.0
+        col = None
+
+        for j in range(canonical_n):
+            if j not in basis and abs(table[i][j]) > EPS:
+                col = j
+                break
+
+        if col is None:
+            if any(abs(v) > EPS for v in table[i][:canonical_n]):
+                raise ArithmeticError("Не удалось исключить искусственную переменную")
+
+            table.pop(i)
+            basis.pop(i)
+            print("Удалена зависимая строка с нулевой искусственной переменной.")
+        else:
+            pivot(table, i, col)
+            basis[i] = col
+            i += 1
 
     new_table = []
 
@@ -169,8 +195,6 @@ def solve(c, A, signs, b, direction):
 
     table.append(objective)
 
-    print("\nПереход к основной задаче...")
-    print("Решение основной задачи...")
 
     if not simplex(table, basis):
         print("Целевая функция не ограничена")
@@ -183,6 +207,9 @@ def solve(c, A, signs, b, direction):
             x[basis[i]] = table[i][-1]
 
     answer = x[:n]
+
+    for j, k in negative_columns.items():
+        answer[j] -= x[k]
 
     Z = sum(
         original_c[i] * answer[i]
@@ -208,6 +235,16 @@ direction = input("min или max: ").strip().lower()
 print("Коэффициенты целевой функции:")
 c = list(map(float, input().split()))
 
+free_vars = {
+    int(value) - 1
+    for value in input(
+        "Номера свободных по знаку переменных: "
+    ).split()
+}
+
+if any(j < 0 or j >= n for j in free_vars):
+    raise ValueError("Номер свободной переменной должен быть от 1 до n")
+
 A = []
 signs = []
 b = []
@@ -226,4 +263,4 @@ for i in range(m):
     signs.append(sign)
     b.append(right)
 
-solve(c, A, signs, b, direction)
+solve(c, A, signs, b, direction, free_vars)
