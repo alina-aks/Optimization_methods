@@ -226,41 +226,47 @@ def solve(c, A, signs, b, direction, free_vars=()):
 
     print(f"Z = {Z:g}")
 
+if __name__ == "__main__":
+    n = int(input("Количество переменных: "))
+    m = int(input("Количество ограничений: "))
 
-n = int(input("Количество переменных: "))
-m = int(input("Количество ограничений: "))
+    direction = input("min или max: ").strip().lower()
 
-direction = input("min или max: ").strip().lower()
+    if direction not in ("min", "max"):
+        raise ValueError("Направление должно быть min или max")
 
-print("Коэффициенты целевой функции:")
-c = list(map(float, input().split()))
+    print("Коэффициенты целевой функции:")
+    c = list(map(float, input().split()))
 
-free_vars = {
-    int(value) - 1
-    for value in input(
-        "Номера свободных по знаку переменных: "
-    ).split()
-}
+    free_vars = {
+        int(value) - 1
+        for value in input(
+            "Номера свободных по знаку переменных: "
+        ).split()
+    }
 
-if any(j < 0 or j >= n for j in free_vars):
-    raise ValueError("Номер свободной переменной должен быть от 1 до n")
+    if any(j < 0 or j >= n for j in free_vars):
+        raise ValueError("Номер свободной переменной должен быть от 1 до n")
 
-A = []
-signs = []
-b = []
+    A = []
+    signs = []
+    b = []
 
-for i in range(m):
-    print(f"\nОграничение {i + 1}")
+    for i in range(m):
+        print(f"\nОграничение {i + 1}")
 
-    row = list(
-        map(float, input("Коэффициенты: ").split())
-    )
+        row = list(
+            map(float, input("Коэффициенты: ").split())
+        )
 
-    sign = input("Знак (<=, =, >=): ").strip()
-    right = float(input("Правая часть: "))
+        sign = input("Знак (<=, =, >=): ").strip()
+        if sign not in ("<=", "=", ">="):
+            raise ValueError("Неверный знак ограничения")
 
-    A.append(row)
-    signs.append(sign)
-    b.append(right)
+        right = float(input("Правая часть: "))
 
-solve(c, A, signs, b, direction, free_vars)
+        A.append(row)
+        signs.append(sign)
+        b.append(right)
+
+    solve(c, A, signs, b, direction, free_vars)
