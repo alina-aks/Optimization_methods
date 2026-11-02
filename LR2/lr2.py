@@ -52,8 +52,11 @@ def piyavsky(f, a, b, eps, max_iter=10000):
     b = checked(b, "b")
     eps = checked(eps, "eps")
 
-    if a >= b or eps <= 0:
-        raise ValueError("Нужно, чтобы a < b и eps > 0")
+    if a > b:
+        a, b = b, a
+
+    if a == b or eps <= 0:
+        raise ValueError("Нужно, чтобы a != b и eps > 0")
 
     if not isinstance(max_iter, int) or max_iter < 0:
         raise ValueError("Лимит итераций должен быть целым неотрицательным числом")
@@ -126,6 +129,9 @@ def main():
         a = float(input("Левая граница a: "))
         b = float(input("Правая граница b: "))
         eps = float(input("Точность eps: "))
+
+        if a > b:
+            a, b = b, a
 
         allowed = {
             "sin": math.sin,
